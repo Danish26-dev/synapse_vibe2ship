@@ -3,12 +3,12 @@ import {
   getAuth, 
   onAuthStateChanged, 
   signInWithPopup, 
+  signInAnonymously,
   GoogleAuthProvider, 
   signOut, 
   User as FirebaseUser 
 } from "firebase/auth";
 import { 
-  getFirestore, 
   doc, 
   getDoc, 
   setDoc, 
@@ -16,11 +16,11 @@ import {
 } from "firebase/firestore";
 import { initializeApp, getApps } from "firebase/app";
 import firebaseConfig from "../../firebase-applet-config.json";
+import { db } from "./FirebaseProvider";
 
 // Initialize Firebase App lazily to protect against crash on missing config
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 const auth = getAuth(app);
-const db = getFirestore(app);
 
 export interface UserProfile {
   uid: string;
@@ -36,6 +36,7 @@ interface AuthContextType {
   profile: UserProfile | null;
   loading: boolean;
   loginWithGoogle: () => Promise<void>;
+  loginAsDemo: (role: "citizen" | "authority") => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -61,8 +62,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Automatically initialize a citizen profile if not found
             const newProfile: UserProfile = {
               uid: firebaseUser.uid,
-              email: firebaseUser.email || "",
-              displayName: firebaseUser.displayName,
+              email: firebaseUser.email || "demo.resident@synapse.civic",
+              displayName: firebaseUser.displayName || "Demo Resident",
               role: "citizen",
               createdAt: serverTimestamp()
             };
@@ -93,6 +94,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const loginAsDemo = async (role: "citizen" | "authority") => {
+    setLoading(true);
+    try {
+      const userCredential = await signInAnonymously(auth);
+      const uid = userCredential.user.uid;
+      
+      const newProfile: UserProfile = {
+        uid,
+        email: role === "authority" ? "authority.lead@synapse.gov" : "demo.resident@synapse.civic",
+        displayName: role === "authority" ? "Operations Lead (Ward 4)" : "Demo Resident",
+        role,
+        ward: role === "authority" ? "Ward 4 - East District" : undefined,
+        createdAt: serverTimestamp()
+      };
+
+      const docRef = doc(db, "users", uid);
+      await setDoc(docRef, newProfile);
+      setProfile(newProfile);
+    } catch (error) {
+      console.error("⚠️ Demo login error:", error);
+      setLoading(false);
+      throw error;
+    }
+  };
+
   const logout = async () => {
     setLoading(true);
     try {
@@ -105,7 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, loginWithGoogle, logout }}>
+    <AuthContext.Provider value={{ user, profile, loading, loginWithGoogle, loginAsDemo, logout }}>
       {children}
     </AuthContext.Provider>
   );

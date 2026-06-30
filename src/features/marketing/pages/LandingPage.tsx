@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import Navbar from "../../../components/Navbar";
 import ParticleNetwork from "../../../components/ParticleNetwork";
@@ -15,9 +16,14 @@ import Logo from "../../../components/Logo";
 import { Sparkles, ArrowRight, X, Play, Mic, Eye, CheckCircle2 } from "lucide-react";
 
 export default function LandingPage() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [demoOpen, setDemoOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("home");
+
+  const handleLaunchDemo = () => {
+    navigate("/login");
+  };
 
   // Interactive Live Demo Simulator State
   const [simStep, setSimStep] = useState<"idle" | "listening" | "analyzing" | "verifying" | "dispatching" | "resolved">("idle");
@@ -130,7 +136,7 @@ export default function LandingPage() {
       </div>
 
       {/* 3. NAVBAR HEADER */}
-      <Navbar onLaunchDemo={() => setDemoOpen(true)} activeSection={activeSection} />
+      <Navbar onLaunchDemo={handleLaunchDemo} activeSection={activeSection} />
 
       {/* 4. HERO SECTION */}
       <header className="relative pt-32 pb-16 md:pt-48 md:pb-24 max-w-7xl mx-auto px-6 md:px-8 z-10">
@@ -181,7 +187,7 @@ export default function LandingPage() {
               className="flex flex-col sm:flex-row gap-4 pt-2"
             >
               <button
-                onClick={() => setDemoOpen(true)}
+                onClick={handleLaunchDemo}
                 style={{
                   background: "linear-gradient(135deg, #2563EB, #22C97E)",
                 }}
@@ -244,7 +250,7 @@ export default function LandingPage() {
       <TechStack />
 
       {/* 11. FINAL DISPLAY CTA */}
-      <FinalCTA onLaunchDemo={() => setDemoOpen(true)} />
+      <FinalCTA onLaunchDemo={handleLaunchDemo} />
 
       {/* 12. MINIMAL FOOTER */}
       <Footer />

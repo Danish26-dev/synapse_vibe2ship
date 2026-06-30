@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { initializeApp, getApps } from "firebase/app";
 import { 
-  getFirestore, 
+  initializeFirestore, 
   doc, 
   getDocFromServer, 
   Firestore 
@@ -12,7 +12,9 @@ import firebaseConfig from "../../firebase-applet-config.json";
 
 // Initialize core Firebase services lazily to prevent boot crashes if config is missing
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-export const db = getFirestore(app);
+export const db = initializeFirestore(app, {
+  experimentalForceLongPolling: true
+}, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
 export const storage = getStorage(app);
 
