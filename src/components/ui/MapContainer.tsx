@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Loader } from "@googlemaps/js-api-loader";
+import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
 import { MapPin, Globe } from "lucide-react";
 
 interface MarkerData {
@@ -32,38 +32,48 @@ export default function MapContainer({
       return;
     }
 
-    const loader = new Loader({
-      apiKey,
-      version: "weekly",
-      libraries: ["places"]
-    });
-
-    (loader as any).load()
-      .then((google: any) => {
-        setGoogleMapsLoaded(true);
-        if (mapRef.current) {
-          const map = new google.maps.Map(mapRef.current, {
-            center,
-            zoom,
-            mapId: "DEMO_MAP_ID",
-            disableDefaultUI: true,
-            zoomControl: true,
-          });
-
-          markers.forEach((markerInfo) => {
-            new google.maps.Marker({
-              position: { lat: markerInfo.lat, lng: markerInfo.lng },
-              map,
-              title: markerInfo.title,
-              animation: google.maps.Animation.DROP
-            });
-          });
-        }
-      })
-      .catch((e: any) => {
-        console.error("⚠️ Failed to load Google Maps SDK:", e);
-        setError("Map initialization failed. Falling back to mesh layout.");
+    try {
+      setOptions({
+        key: apiKey,
+        v: "weekly",
+        libraries: ["places"]
       });
+
+      Promise.all([
+        importLibrary("maps"),
+        importLibrary("marker")
+      ])
+        .then(([mapsLib, markerLib]: [any, any]) => {
+          setGoogleMapsLoaded(true);
+          if (mapRef.current) {
+            const { Map } = mapsLib;
+            const { Marker } = markerLib;
+
+            const map = new Map(mapRef.current, {
+              center,
+              zoom,
+              mapId: "DEMO_MAP_ID",
+              disableDefaultUI: true,
+              zoomControl: true,
+            });
+
+            markers.forEach((markerInfo) => {
+              new Marker({
+                position: { lat: markerInfo.lat, lng: markerInfo.lng },
+                map,
+                title: markerInfo.title,
+              });
+            });
+          }
+        })
+        .catch((e: any) => {
+          console.error("⚠️ Failed to load Google Maps SDK:", e);
+          setError("Map initialization failed. Falling back to mesh layout.");
+        });
+    } catch (err: any) {
+      console.error("⚠️ Failed to setOptions for Google Maps loader:", err);
+      setError("Map initialization options failed.");
+    }
   }, [center, zoom, markers]);
 
   const apiKey = (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY;

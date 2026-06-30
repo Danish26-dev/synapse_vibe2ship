@@ -1,10 +1,9 @@
-# Synapse -Autonomous Civic Operating System
+# Synapse Civic Resolution & Decision Intelligence Platform 🏙️
 
 [![Platform - Progressive Web App](https://img.shields.io/badge/Platform-PWA-blue.svg?style=flat-square)](#)
 [![Stack - Google Cloud Platform](https://img.shields.io/badge/Stack-Google%20Cloud-orange.svg?style=flat-square)](#)
 [![AI Engine - Google ADK](https://img.shields.io/badge/AI_Engine-Google%20ADK-blueviolet.svg?style=flat-square)](#)
-
-<img width="1408" height="768" alt="image" src="https://github.com/user-attachments/assets/57a3340f-2a49-405f-848a-528a56714c3f" />
+[![Built for - Google Gen AI APAC](https://img.shields.io/badge/Built%20for-Google%20Gen%20AI%20APAC-darkgreen.svg?style=flat-square)](#)
 
 Synapse is an AI-native Civic Resolution & Decision Intelligence Platform built as a Progressive Web Application (PWA). Instead of functioning as a traditional static complaint portal, Synapse operates as an autonomous **AI Case Officer** and decision support hub, transforming raw public submissions into structured, verifiable, and resolved municipal operations.
 
