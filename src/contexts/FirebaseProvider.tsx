@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { initializeApp, getApps } from "firebase/app";
 import { 
   initializeFirestore, 
+  getFirestore,
   doc, 
   getDocFromServer, 
   Firestore 
@@ -12,9 +13,19 @@ import firebaseConfig from "../../firebase-applet-config.json";
 
 // Initialize core Firebase services lazily to prevent boot crashes if config is missing
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-export const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true
-}, firebaseConfig.firestoreDatabaseId);
+
+// Secure initialization of Firestore that is robust to HMR/hot-reloads
+let dbInstance: Firestore;
+try {
+  dbInstance = initializeFirestore(app, {
+    experimentalForceLongPolling: true
+  }, firebaseConfig.firestoreDatabaseId);
+} catch (error) {
+  console.warn("⚠️ Firestore already initialized, falling back to getFirestore:", error);
+  dbInstance = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+}
+
+export const db = dbInstance;
 export const auth = getAuth(app);
 export const storage = getStorage(app);
 

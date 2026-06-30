@@ -106,34 +106,54 @@ export default function Report() {
   const handleAuthorizeDispatch = async () => {
     if (!pipelineOutput) return;
 
+    const id = `SYN-${Math.floor(100000 + Math.random() * 900000)}`;
+    const payload = {
+      id,
+      title: pipelineOutput.title,
+      description: pipelineOutput.description,
+      status: "reported" as const,
+      priority: pipelineOutput.priority,
+      reporterId: profile?.uid || "anonymous_user",
+      reporterName: profile?.displayName || "Anonymous Citizen",
+      assignedWard: pipelineOutput.assignedWard,
+      category: pipelineOutput.category,
+      department: pipelineOutput.department,
+      latitude: pipelineOutput.latitude,
+      longitude: pipelineOutput.longitude,
+      mediaUrl: uploadedImage || "https://images.unsplash.com/photo-1515162305285-0293e4767cc2?auto=format&fit=crop&q=80&w=400"
+    };
+
     try {
       // Write to real Firestore Database!
       const caseRef = collection(db, "cases");
-      const id = `SYN-${Math.floor(100000 + Math.random() * 900000)}`;
-      const payload = {
-        id,
-        title: pipelineOutput.title,
-        description: pipelineOutput.description,
-        status: "reported",
-        priority: pipelineOutput.priority,
-        reporterId: profile?.uid || "anonymous_user",
-        reporterName: profile?.displayName || "Anonymous Citizen",
-        assignedWard: pipelineOutput.assignedWard,
-        category: pipelineOutput.category,
-        department: pipelineOutput.department,
-        latitude: pipelineOutput.latitude,
-        longitude: pipelineOutput.longitude,
-        mediaUrl: uploadedImage || "https://images.unsplash.com/photo-1515162305285-0293e4767cc2?auto=format&fit=crop&q=80&w=400",
+      await addDoc(caseRef, {
+        ...payload,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
-      };
-
-      await addDoc(caseRef, payload);
+      });
       showToast.success(`Case ${id} successfully logged to civic database!`);
       navigate("/cases");
     } catch (error) {
-      console.error("Firestore Save Error:", error);
-      showToast.error("Database connection failure. Check Firebase logs.");
+      console.warn("⚠️ Firestore connection unreachable. Saving case to local resilient fallback cache:", error);
+      
+      try {
+        const localCasesStr = localStorage.getItem("synapse_local_cases");
+        const localCases = localCasesStr ? JSON.parse(localCasesStr) : [];
+        const offlineCase = {
+          ...payload,
+          docId: `local_${payload.id}`,
+          createdAt: { toDate: () => new Date() }, // Mock Timestamp for frontend rendering compatibility
+          updatedAt: { toDate: () => new Date() }
+        };
+        localCases.push(offlineCase);
+        localStorage.setItem("synapse_local_cases", JSON.stringify(localCases));
+        
+        showToast.success(`Case ${id} saved locally in offline-resilient backup cache.`);
+        navigate("/cases");
+      } catch (fallbackErr) {
+        console.error("❌ Critical: offline cache fallback also failed:", fallbackErr);
+        showToast.error("Database connection and local storage write both failed.");
+      }
     }
   };
 

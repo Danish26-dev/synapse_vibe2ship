@@ -40,6 +40,31 @@ export default function AuthorityAnalytics() {
   const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
+    const mergeAndSetCases = (firestoreList: CaseItem[]) => {
+      const localCasesStr = localStorage.getItem("synapse_local_cases");
+      let merged = [...firestoreList];
+      
+      if (localCasesStr) {
+        try {
+          const localList = JSON.parse(localCasesStr);
+          localList.forEach((lc: any) => {
+            if (!firestoreList.some(fc => fc.id === lc.id)) {
+              merged.push({
+                id: lc.id,
+                docId: lc.docId || `local_${lc.id}`,
+                status: lc.status,
+                priority: lc.priority,
+                category: lc.category
+              });
+            }
+          });
+        } catch (e) {
+          console.error("⚠️ Error parsing local cases in analytics view:", e);
+        }
+      }
+      setCases(merged);
+    };
+
     const casesRef = collection(db, "cases");
     const unsubscribe = onSnapshot(query(casesRef), (snapshot) => {
       const list: CaseItem[] = [];
@@ -53,7 +78,11 @@ export default function AuthorityAnalytics() {
           category: data.category
         });
       });
-      setCases(list);
+      mergeAndSetCases(list);
+      setLoading(false);
+    }, (error) => {
+      console.error("⚠️ Authority Analytics loading error:", error);
+      mergeAndSetCases([]);
       setLoading(false);
     });
 

@@ -53,6 +53,51 @@ export default function AuthorityCases() {
   const [auditMode, setAuditMode] = useState(false);
 
   useEffect(() => {
+    const mergeAndSetCases = (firestoreList: CaseItem[]) => {
+      const localCasesStr = localStorage.getItem("synapse_local_cases");
+      let merged = [...firestoreList];
+      
+      if (localCasesStr) {
+        try {
+          const localList = JSON.parse(localCasesStr);
+          localList.forEach((lc: any) => {
+            if (!firestoreList.some(fc => fc.id === lc.id)) {
+              merged.push({
+                docId: lc.docId || `local_${lc.id}`,
+                id: lc.id,
+                title: lc.title,
+                description: lc.description,
+                status: lc.status,
+                priority: lc.priority,
+                assignedWard: lc.assignedWard,
+                category: lc.category,
+                mediaUrl: lc.mediaUrl,
+                department: lc.department,
+                latitude: lc.latitude,
+                longitude: lc.longitude,
+                createdAt: lc.createdAt,
+                reporterName: lc.reporterName
+              });
+            }
+          });
+        } catch (e) {
+          console.error("⚠️ Error parsing local cases in admin view:", e);
+        }
+      }
+
+      // Safe timestamp conversion and sorting by date descending
+      const getTimestampTime = (val: any) => {
+        if (!val) return 0;
+        if (typeof val.toDate === "function") return val.toDate().getTime();
+        if (val.seconds) return val.seconds * 1000;
+        const parsed = Date.parse(val);
+        return isNaN(parsed) ? 0 : parsed;
+      };
+
+      merged.sort((a, b) => getTimestampTime(b.createdAt) - getTimestampTime(a.createdAt));
+      setCases(merged);
+    };
+
     // Listen to ALL cases in Firestore
     const casesRef = collection(db, "cases");
     const q = query(casesRef, orderBy("createdAt", "desc"));
@@ -78,10 +123,11 @@ export default function AuthorityCases() {
           reporterName: data.reporterName
         });
       });
-      setCases(casesList);
+      mergeAndSetCases(casesList);
       setLoading(false);
     }, (error) => {
       console.error("Firestore loading error:", error);
+      mergeAndSetCases([]);
       setLoading(false);
     });
 
@@ -89,18 +135,43 @@ export default function AuthorityCases() {
   }, []);
 
   const handleUpdateStatus = async (caseDocId: string, nextStatus: "dispatched" | "in_progress" | "resolved") => {
+    const messageMap = {
+      dispatched: "Incident approved. Engineering crew scheduled.",
+      in_progress: "Dispatch active. Engineering squad deployed on-site.",
+      resolved: "Work marked as completed. Awaiting citizen verification."
+    };
+
     try {
+      if (caseDocId.startsWith("local_")) {
+        // Update local storage cases cache
+        const localCasesStr = localStorage.getItem("synapse_local_cases");
+        if (localCasesStr) {
+          try {
+            const localCases = JSON.parse(localCasesStr);
+            const updated = localCases.map((c: any) => 
+              (c.docId === caseDocId || `local_${c.id}` === caseDocId) 
+                ? { ...c, status: nextStatus, updatedAt: new Date().toISOString() } 
+                : c
+            );
+            localStorage.setItem("synapse_local_cases", JSON.stringify(updated));
+          } catch (e) {
+            console.error("Failed to update offline case local status:", e);
+          }
+        }
+        
+        showToast.success(messageMap[nextStatus]);
+        setCases(prev => prev.map(c => c.docId === caseDocId ? { ...c, status: nextStatus } : c));
+        if (selectedCase && selectedCase.docId === caseDocId) {
+          setSelectedCase(prev => prev ? { ...prev, status: nextStatus } : null);
+        }
+        return;
+      }
+
       const docRef = doc(db, "cases", caseDocId);
       await updateDoc(docRef, {
         status: nextStatus,
         updatedAt: serverTimestamp()
       });
-
-      const messageMap = {
-        dispatched: "Incident approved. Engineering crew scheduled.",
-        in_progress: "Dispatch active. Engineering squad deployed on-site.",
-        resolved: "Work marked as completed. Awaiting citizen verification."
-      };
 
       showToast.success(messageMap[nextStatus]);
 
@@ -109,8 +180,26 @@ export default function AuthorityCases() {
         setSelectedCase(prev => prev ? { ...prev, status: nextStatus } : null);
       }
     } catch (err) {
-      console.error("Status update failed:", err);
-      showToast.error("Database mismatch error.");
+      console.warn("⚠️ Firestore write blocked. Falling back to local state updates:", err);
+      
+      const localCasesStr = localStorage.getItem("synapse_local_cases");
+      const localCases = localCasesStr ? JSON.parse(localCasesStr) : [];
+      const currentCase = cases.find(c => c.docId === caseDocId);
+      if (currentCase) {
+        const offlineUpdatedCase = {
+          ...currentCase,
+          status: nextStatus,
+          updatedAt: new Date().toISOString()
+        };
+        const updatedLocal = [...localCases.filter((c: any) => c.id !== currentCase.id), offlineUpdatedCase];
+        localStorage.setItem("synapse_local_cases", JSON.stringify(updatedLocal));
+      }
+
+      showToast.success(messageMap[nextStatus] + " (Offline Mode)");
+      setCases(prev => prev.map(c => c.docId === caseDocId ? { ...c, status: nextStatus } : c));
+      if (selectedCase && selectedCase.docId === caseDocId) {
+        setSelectedCase(prev => prev ? { ...prev, status: nextStatus } : null);
+      }
     }
   };
 

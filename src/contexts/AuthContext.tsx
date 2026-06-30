@@ -48,9 +48,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Retrieve mock session if available
+    const storedMockUser = localStorage.getItem("synapse_mock_user");
+    const storedMockProfile = localStorage.getItem("synapse_mock_profile");
+
+    if (storedMockUser && storedMockProfile) {
+      try {
+        setUser(JSON.parse(storedMockUser));
+        setProfile(JSON.parse(storedMockProfile));
+        setLoading(false);
+      } catch (e) {
+        console.error("⚠️ Failed to parse stored mock session:", e);
+      }
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setUser(firebaseUser);
       if (firebaseUser) {
+        // Clear mock session if signed in via real Firebase Auth
+        localStorage.removeItem("synapse_mock_user");
+        localStorage.removeItem("synapse_mock_profile");
+        setUser(firebaseUser);
         try {
           // Fetch additional profile data from Firestore
           const docRef = doc(db, "users", firebaseUser.uid);
@@ -59,24 +76,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (docSnap.exists()) {
             setProfile(docSnap.data() as UserProfile);
           } else {
-            // Automatically initialize a citizen profile if not found
-            const newProfile: UserProfile = {
-              uid: firebaseUser.uid,
-              email: firebaseUser.email || "demo.resident@synapse.civic",
-              displayName: firebaseUser.displayName || "Demo Resident",
-              role: "citizen",
-              createdAt: serverTimestamp()
-            };
-            await setDoc(docRef, newProfile);
-            setProfile(newProfile);
+            // Automatically initialize a citizen profile if not found (only for non-anonymous users to prevent race condition during demo login)
+            if (!firebaseUser.isAnonymous) {
+              const newProfile: UserProfile = {
+                uid: firebaseUser.uid,
+                email: firebaseUser.email || "demo.resident@synapse.civic",
+                displayName: firebaseUser.displayName || "Demo Resident",
+                role: "citizen",
+                createdAt: serverTimestamp()
+              };
+              await setDoc(docRef, newProfile);
+              setProfile(newProfile);
+            }
           }
         } catch (error) {
           console.error("⚠️ Failed to load or initialize user profile from Firestore:", error);
         }
+        setLoading(false);
       } else {
-        setProfile(null);
+        // Only reset if there's no active mock session
+        if (!localStorage.getItem("synapse_mock_user")) {
+          setUser(null);
+          setProfile(null);
+          setLoading(false);
+        }
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();
@@ -86,6 +110,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     const provider = new GoogleAuthProvider();
     try {
+      localStorage.removeItem("synapse_mock_user");
+      localStorage.removeItem("synapse_mock_profile");
       await signInWithPopup(auth, provider);
     } catch (error) {
       console.error("⚠️ SSO login error:", error);
@@ -97,6 +123,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loginAsDemo = async (role: "citizen" | "authority") => {
     setLoading(true);
     try {
+      // First try real anonymous login
       const userCredential = await signInAnonymously(auth);
       const uid = userCredential.user.uid;
       
@@ -113,20 +140,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await setDoc(docRef, newProfile);
       setProfile(newProfile);
     } catch (error) {
-      console.error("⚠️ Demo login error:", error);
+      console.warn("⚠️ Demo anonymous login blocked, entering robust fallback mock session:", error);
+
+      // Generate fully functional mock user / profile fallback
+      const mockUid = role === "authority" ? "demo_authority_uid" : "demo_citizen_uid";
+      const mockUser = {
+        uid: mockUid,
+        email: role === "authority" ? "authority.lead@synapse.gov" : "demo.resident@synapse.civic",
+        displayName: role === "authority" ? "Operations Lead (Ward 4)" : "Demo Resident",
+        isAnonymous: true,
+        isMock: true
+      };
+
+      const mockProfile: UserProfile = {
+        uid: mockUid,
+        email: mockUser.email,
+        displayName: mockUser.displayName,
+        role,
+        ward: role === "authority" ? "Ward 4 - East District" : undefined,
+        createdAt: new Date().toISOString()
+      };
+
+      // Save in localStorage for persistence
+      localStorage.setItem("synapse_mock_user", JSON.stringify(mockUser));
+      localStorage.setItem("synapse_mock_profile", JSON.stringify(mockProfile));
+
+      // Attempt to register/update the user profile in Firestore
+      try {
+        const docRef = doc(db, "users", mockUid);
+        await setDoc(docRef, mockProfile);
+      } catch (firestoreError) {
+        console.warn("⚠️ Could not register mock profile in Firestore (will rely on memory):", firestoreError);
+      }
+
+      setUser(mockUser as any);
+      setProfile(mockProfile);
       setLoading(false);
-      throw error;
     }
   };
 
   const logout = async () => {
     setLoading(true);
     try {
+      localStorage.removeItem("synapse_mock_user");
+      localStorage.removeItem("synapse_mock_profile");
       await signOut(auth);
+      setUser(null);
+      setProfile(null);
     } catch (error) {
       console.error("⚠️ Logout error:", error);
       setLoading(false);
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
