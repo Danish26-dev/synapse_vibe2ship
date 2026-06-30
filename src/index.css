@@ -1,0 +1,60 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap");
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Custom ease variables for elegant transitions */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Synapse Color tokens for Premium Light Theme */
+  --color-synapse-bg-primary: #F8FBFD;
+  --color-synapse-bg-secondary: #F1F7FA;
+  --color-synapse-bg-section: #ECF4F8;
+  --color-synapse-surface: #FFFFFF;
+  --color-synapse-card: rgba(255, 255, 255, 0.82);
+  --color-synapse-border: #DCE7EE;
+  --color-synapse-divider: #E6EEF3;
+
+  --color-synapse-text-primary: #102A43;
+  --color-synapse-text-secondary: #52667A;
+  --color-synapse-text-muted: #6B7C93;
+
+  /* Brand Colors */
+  --color-synapse-blue: #2563EB;
+  --color-synapse-emerald: #22C97E;
+  --color-synapse-mint: #6EE7B7;
+  --color-synapse-cyan: #38BDF8;
+  --color-synapse-amber: #F7A623;
+}
+
+/* Base custom styles for premium finish */
+html {
+  scroll-behavior: smooth;
+  background-color: #F8FBFD;
+  color: #102A43;
+  font-family: var(--font-sans);
+}
+
+/* Sub-headings and headings display default settings */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  color: #102A43;
+}
+
+/* Premium scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #F8FBFD;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(16, 42, 67, 0.08);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(16, 42, 67, 0.2);
+}

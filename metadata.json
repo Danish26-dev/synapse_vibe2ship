@@ -1,0 +1,6 @@
+{
+  "name": "Synapse",
+  "description": "Official product launch landing page for Synapse, an AI-managed civic resolution platform designed to build smarter communities.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

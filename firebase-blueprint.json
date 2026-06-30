@@ -1,0 +1,47 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile for citizens and authority administrators",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "The unique user ID" },
+        "email": { "type": "string", "format": "email", "description": "User email address" },
+        "displayName": { "type": "string", "description": "The visual display name" },
+        "role": { "type": "string", "enum": ["citizen", "authority", "admin"], "description": "User permissions tier" },
+        "ward": { "type": "string", "description": "The assigned municipal ward" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["uid", "email", "role", "createdAt"]
+    },
+    "Case": {
+      "title": "Case",
+      "description": "Civic grievance or resolution ticket reported by residents",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique ticket ID" },
+        "title": { "type": "string", "description": "High level description of problem" },
+        "description": { "type": "string", "description": "Detailed text of the issue" },
+        "status": { "type": "string", "enum": ["reported", "analyzed", "verifying", "dispatched", "in_progress", "resolved", "closed"], "description": "Resolution workflow state" },
+        "priority": { "type": "string", "enum": ["low", "medium", "high", "critical"], "description": "AI-calculated impact priority" },
+        "reporterId": { "type": "string", "description": "UID of reporting citizen" },
+        "assignedWard": { "type": "string", "description": "Bound ward geographic mesh identifier" },
+        "category": { "type": "string", "description": "Issue classification tag" },
+        "mediaUrl": { "type": "string", "description": "Visual audit photograph attachment URL" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Reporting timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last updated timestamp" }
+      },
+      "required": ["id", "title", "description", "status", "priority", "reporterId", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Collection of user identities and roles"
+    },
+    "/cases/{caseId}": {
+      "schema": "Case",
+      "description": "Collection of active and closed municipal grievance cases"
+    }
+  }
+}
