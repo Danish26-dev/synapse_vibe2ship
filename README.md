@@ -1,4 +1,4 @@
-# Synapse Civic Resolution & Decision Intelligence Platform 🏙️
+# Synapse -Autonomous Civic Operating System
 
 [![Platform - Progressive Web App](https://img.shields.io/badge/Platform-PWA-blue.svg?style=flat-square)](#)
 [![Stack - Google Cloud Platform](https://img.shields.io/badge/Stack-Google%20Cloud-orange.svg?style=flat-square)](#)
